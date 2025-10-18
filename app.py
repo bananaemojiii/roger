@@ -88,12 +88,44 @@ class CameraStream:
         
         return frame
     
+    def generate_placeholder(self):
+        """Generate a placeholder image when camera is not available"""
+        # Create a placeholder image
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
+        img[:] = (60, 60, 60)  # Dark gray background
+        
+        # Add text
+        text_lines = [
+            "Camera Not Connected",
+            "",
+            "Please check:",
+            "1. Raspberry Pi is online",
+            "2. Camera stream is running",
+            "3. ngrok tunnel is active",
+            "4. RASPBERRY_PI_URL is set correctly",
+            "",
+            f"Current URL: {RASPBERRY_PI_URL}"
+        ]
+        
+        y_offset = 100
+        for line in text_lines:
+            cv2.putText(img, line, (50, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 
+                       0.6, (255, 255, 255), 1, cv2.LINE_AA)
+            y_offset += 35
+        
+        ret, buffer = cv2.imencode('.jpg', img)
+        return buffer.tobytes()
+    
     def generate_frames(self):
         """Generate frames with YOLO detection"""
+        error_count = 0
+        max_errors = 10
+        
         while True:
             frame = self.get_frame_from_pi()
             
             if frame is not None:
+                error_count = 0  # Reset error count on success
                 # Process with YOLO
                 processed_frame = self.process_frame_with_yolo(frame)
                 
@@ -104,6 +136,15 @@ class CameraStream:
                         frame_bytes = buffer.tobytes()
                         yield (b'--frame\r\n'
                                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            else:
+                error_count += 1
+                # Show placeholder if unable to get frames
+                if error_count >= max_errors:
+                    placeholder_bytes = self.generate_placeholder()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + placeholder_bytes + b'\r\n')
+                    time.sleep(2)  # Wait longer between retries
+                    continue
             
             time.sleep(0.033)  # ~30 FPS
 
@@ -124,6 +165,18 @@ def video_feed():
 def health():
     """Health check endpoint for Railway"""
     return {'status': 'healthy', 'raspberry_pi_url': RASPBERRY_PI_URL}
+
+@app.route('/status')
+def status():
+    """Check if camera connection is working"""
+    try:
+        response = requests.get(RASPBERRY_PI_URL, timeout=3)
+        if response.status_code == 200:
+            return {'status': 'connected', 'raspberry_pi_url': RASPBERRY_PI_URL}
+        else:
+            return {'status': 'error', 'message': f'HTTP {response.status_code}', 'raspberry_pi_url': RASPBERRY_PI_URL}
+    except Exception as e:
+        return {'status': 'disconnected', 'error': str(e), 'raspberry_pi_url': RASPBERRY_PI_URL}
 
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
@@ -293,21 +346,42 @@ HTML_TEMPLATE = '''
     </div>
     
     <script>
+        // Check connection status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                console.log('Camera status:', data);
+                
+                const statusBadge = document.querySelector('.status-badge');
+                if (data.status === 'connected') {
+                    statusBadge.style.background = 'rgba(34, 197, 94, 0.9)';
+                    statusBadge.innerHTML = '<span class="pulse"></span>LIVE';
+                } else if (data.status === 'disconnected') {
+                    statusBadge.style.background = 'rgba(239, 68, 68, 0.9)';
+                    statusBadge.innerHTML = '⚠️ DISCONNECTED';
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+            }
+        }
+        
+        // Check status on load and every 10 seconds
+        checkStatus();
+        setInterval(checkStatus, 10000);
+        
         // Reload image if it fails to load
         document.getElementById('stream').onerror = function() {
+            console.error('Stream failed to load, retrying...');
             setTimeout(() => {
                 this.src = "{{ url_for('video_feed') }}?" + new Date().getTime();
             }, 5000);
         };
         
-        // Update timestamp
-        setInterval(() => {
-            const img = document.getElementById('stream');
-            const current = img.src;
-            if (!current.includes('?')) {
-                img.src = current + '?' + new Date().getTime();
-            }
-        }, 60000); // Refresh every minute
+        // Log when stream loads successfully
+        document.getElementById('stream').onload = function() {
+            console.log('Stream loaded successfully');
+        };
     </script>
 </body>
 </html>
