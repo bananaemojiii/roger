@@ -19,10 +19,21 @@ app = Flask(__name__)
 RASPBERRY_PI_URL = os.environ.get('RASPBERRY_PI_URL', 'http://192.168.4.102:8000/stream.mjpg')
 PORT = int(os.environ.get('PORT', 8080))
 
-# Initialize YOLO model
-print("Loading YOLO model...")
-model = YOLO('yolov8n.pt')  # Using YOLOv8 nano for speed
-print("YOLO model loaded!")
+# Initialize YOLO model from Hugging Face
+print("Loading YOLO model from Hugging Face...")
+from huggingface_hub import hf_hub_download
+
+# Download model from your Hugging Face repository
+HF_REPO = os.environ.get('HUGGINGFACE_REPO', 'bananafactories/yolov8-camera-model')
+HF_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', None)
+
+model_path = hf_hub_download(
+    repo_id=HF_REPO,
+    filename="yolov8n.pt",
+    token=HF_TOKEN
+)
+model = YOLO(model_path)
+print(f"YOLO model loaded from: {HF_REPO}!")
 
 class CameraStream:
     def __init__(self):

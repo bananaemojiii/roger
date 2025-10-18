@@ -1,0 +1,2 @@
+HUGGINGFACE_REPO=bananafactories/yolov8-camera-model
+HUGGINGFACE_TOKEN=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
