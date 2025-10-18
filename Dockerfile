@@ -22,9 +22,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY app.py .
 
+# Set default PORT if not provided
+ENV PORT=8080
+
 # Expose port (Railway will set the PORT env var)
-EXPOSE 8080
+EXPOSE $PORT
 
 # Run with gunicorn for production
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 app:app
+CMD gunicorn --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 120 --worker-class gthread app:app
 

@@ -7,80 +7,84 @@ A web application that streams your Raspberry Pi camera feed globally with real-
 - **Global Access**: View your camera from anywhere in the world
 - **AI-Powered**: Real-time object detection using YOLOv8
 - **Beautiful UI**: Modern, responsive web interface
-- **Production Ready**: Deployed on Railway with auto-scaling
+- **Production Ready**: Deployed on Railway with Docker
+- **Health Monitoring**: Built-in health check endpoint
+- **Optimized**: Efficient Docker builds with layer caching
 
 ## 📋 Prerequisites
 
 1. Raspberry Pi with camera module
-2. Railway account (free tier works!)
+2. Railway account (free tier available at [railway.app](https://railway.app))
 3. Git installed on your local machine
+4. ngrok account (free tier works for testing)
 
-## 🛠️ Setup Instructions
+## 🛠️ Quick Start
 
 ### Step 1: Prepare Your Raspberry Pi
 
-Make sure the camera stream is running on your Raspberry Pi:
+1. Make sure the camera stream is running on your Raspberry Pi:
+   ```bash
+   ssh admn@192.168.4.102
+   python3 camera_stream.py &
+   ```
 
-```bash
-ssh admn@192.168.4.102
-python3 camera_stream.py &
-```
+2. The camera stream should be accessible at `http://192.168.4.102:8000/stream.mjpg`
 
-The camera stream should be accessible at `http://192.168.4.102:8000/stream.mjpg`
+### Step 2: Setup ngrok Tunnel
 
-### Step 2: Setup Port Forwarding (Important!)
+To make your Raspberry Pi camera accessible from Railway:
 
-For Railway to access your Raspberry Pi camera, you need to:
-
-**Option A: Use ngrok (Recommended for testing)**
 ```bash
 # On your Raspberry Pi
 ngrok http 8000
 ```
-This will give you a public URL like: `https://xxxx-xx-xx-xxx-xx.ngrok-free.app`
 
-**Option B: Setup your router's port forwarding**
-1. Find your public IP address
-2. Forward port 8000 to your Raspberry Pi's local IP (192.168.4.102)
-3. Use your public IP as: `http://YOUR_PUBLIC_IP:8000/stream.mjpg`
+Copy the ngrok URL (e.g., `https://xxxx-xx-xx-xxx-xx.ngrok-free.app`)
 
 ### Step 3: Deploy to Railway
 
-1. **Initialize Git Repository**
+**Using Railway CLI (Recommended):**
+
 ```bash
-cd "/Users/lukaschmiell/Documents/Crafts and Tech/RASSSP"
-git init
-git add .
-git commit -m "Initial commit: Camera stream with YOLO"
+# Install Railway CLI
+npm install -g @railway/cli
+# or: brew install railway
+
+# Login and initialize
+railway login
+railway init
+
+# Set environment variable
+railway variables set RASPBERRY_PI_URL="https://YOUR-NGROK-URL.ngrok-free.app/stream.mjpg"
+
+# Deploy!
+railway up
+
+# Open your deployed app
+railway open
 ```
 
-2. **Create Railway Project**
-   - Go to [railway.app](https://railway.app)
-   - Click "New Project"
-   - Select "Deploy from GitHub repo" or "Deploy from local"
-   - Connect your repository
+**Using GitHub:**
 
-3. **Set Environment Variable**
-   In Railway dashboard, add this environment variable:
-   ```
-   RASPBERRY_PI_URL=http://YOUR_NGROK_URL/stream.mjpg
-   ```
-   or
-   ```
-   RASPBERRY_PI_URL=http://YOUR_PUBLIC_IP:8000/stream.mjpg
+1. Push to GitHub:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit: Camera stream with YOLO"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   git push -u origin main
    ```
 
-4. **Deploy!**
-   Railway will automatically build and deploy your app.
+2. Connect repository in Railway dashboard
+3. Add `RASPBERRY_PI_URL` environment variable
+4. Railway will automatically deploy!
 
-### Step 4: Access Your Stream
+### Step 4: Access Your Stream! 🎉
 
-Once deployed, Railway will give you a URL like:
-```
-https://your-app-name.railway.app
-```
+Visit your Railway URL: `https://your-project-name.up.railway.app`
 
-Open this URL from anywhere in the world to see your camera feed with YOLO detection! 🎉
+See [DEPLOY.md](DEPLOY.md) for detailed deployment instructions.
 
 ## 🔧 Configuration
 
@@ -88,8 +92,16 @@ Open this URL from anywhere in the world to see your camera feed with YOLO detec
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RASPBERRY_PI_URL` | URL to your Raspberry Pi camera stream | `http://192.168.4.102:8000/stream.mjpg` |
+| `RASPBERRY_PI_URL` | URL to your Raspberry Pi camera stream (required) | `http://192.168.4.102:8000/stream.mjpg` |
 | `PORT` | Port for the web server (Railway sets this automatically) | `8080` |
+
+### Railway Configuration
+
+The project includes:
+- `Dockerfile`: Optimized multi-stage Docker build
+- `railway.json`: Railway deployment configuration with health checks
+- `.dockerignore`: Excludes unnecessary files for faster builds
+- Health check endpoint at `/health`
 
 ## 📱 Usage
 
@@ -151,28 +163,32 @@ python app.py
 
 Visit `http://localhost:8080` to test.
 
-## 🚀 Deployment Commands
+## 🚀 Deployment Commands Reference
 
 ```bash
-# Initial setup
-git init
-git add .
-git commit -m "Initial commit"
-
-# Connect to Railway
-railway login
-railway init
-railway up
-
-# Set environment variable
-railway variables set RASPBERRY_PI_URL=your_camera_url
-
-# View logs
-railway logs
-
-# Open deployed app
-railway open
+# Railway CLI commands
+railway login                    # Login to Railway
+railway init                     # Initialize new project
+railway up                       # Deploy current directory
+railway logs                     # View application logs
+railway logs -f                  # Follow logs in real-time
+railway open                     # Open deployed app in browser
+railway status                   # Check deployment status
+railway variables                # List environment variables
+railway variables set KEY=value  # Set environment variable
+railway run bash                 # SSH into container
+railway link                     # Link to existing project
 ```
+
+## 📊 Monitoring
+
+Railway provides:
+- Real-time logs and deployment status
+- CPU and memory usage metrics
+- Automatic HTTPS and SSL certificates
+- Custom domain support
+- Environment variable management
+- Deployment history and rollbacks
 
 ## 📝 License
 

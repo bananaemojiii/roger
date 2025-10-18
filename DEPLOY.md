@@ -1,19 +1,20 @@
-# 🚀 Quick Deployment Guide
+# 🚀 Railway Deployment Guide
 
 Follow these steps to deploy your camera stream with YOLO to Railway.
 
-## 📋 Step-by-Step Instructions
+## 📋 Prerequisites
+
+- Railway account (free tier available at [railway.app](https://railway.app))
+- Raspberry Pi with camera stream running
+- Git installed locally
+
+## 🎯 Step-by-Step Instructions
 
 ### Step 1: Setup ngrok Tunnel (5 minutes)
 
 Your Raspberry Pi camera needs to be accessible from the internet. We'll use ngrok for this:
 
-```bash
-# Run this script to automatically setup ngrok
-./setup_ngrok.sh
-```
-
-**OR manually:**
+**Quick Setup:**
 
 1. SSH into your Raspberry Pi:
    ```bash
@@ -52,7 +53,7 @@ Your Raspberry Pi camera needs to be accessible from the internet. We'll use ngr
 1. Install Railway CLI:
    ```bash
    npm install -g @railway/cli
-   # or
+   # or on macOS
    brew install railway
    ```
 
@@ -61,34 +62,43 @@ Your Raspberry Pi camera needs to be accessible from the internet. We'll use ngr
    railway login
    ```
 
-3. Create a new project:
+3. Initialize your project (run from the project directory):
    ```bash
+   cd /Users/lukaschmiell/Documents/SOFT/roger
    railway init
    ```
+   Follow the prompts to create a new project.
 
 4. Set your environment variable:
    ```bash
    railway variables set RASPBERRY_PI_URL="https://YOUR-NGROK-URL.ngrok-free.app/stream.mjpg"
    ```
+   Replace `YOUR-NGROK-URL` with your actual ngrok URL from Step 1.
 
 5. Deploy!
    ```bash
    railway up
    ```
+   Railway will use the Dockerfile to build and deploy your application.
 
 6. Get your deployment URL:
    ```bash
    railway open
    ```
+   This will open your deployed application in the browser.
 
 #### Option B: Deploy via GitHub
 
 1. Create a new repository on GitHub
 
-2. Push your code:
+2. Initialize git and push your code (if not already done):
    ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   cd /Users/lukaschmiell/Documents/SOFT/roger
+   git init
+   git add .
    git commit -m "Initial commit: Camera stream with YOLO"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
    git push -u origin main
    ```
 
@@ -97,21 +107,31 @@ Your Raspberry Pi camera needs to be accessible from the internet. We'll use ngr
 4. Click "New Project" → "Deploy from GitHub repo"
 
 5. Select your repository
+   - Railway will automatically detect the Dockerfile
 
 6. Add environment variable:
-   - Go to Variables tab
+   - Go to the "Variables" tab
+   - Click "New Variable"
    - Add `RASPBERRY_PI_URL` = `https://YOUR-NGROK-URL.ngrok-free.app/stream.mjpg`
+   - Replace with your actual ngrok URL
 
-7. Railway will automatically deploy!
+7. Railway will automatically build and deploy!
+   - First deployment may take 3-5 minutes to download YOLO model
 
 ### Step 3: Access Your Stream! 🎉
 
 Once deployed, Railway will give you a URL like:
 ```
-https://your-project-name.railway.app
+https://your-project-name.up.railway.app
 ```
 
 **Open this URL from anywhere in the world!**
+
+#### First Deployment Notes:
+- First build may take 5-10 minutes (installing dependencies + downloading YOLO model)
+- Subsequent deployments will be faster due to Docker layer caching
+- Check deployment status in Railway dashboard
+- View logs with `railway logs` if using CLI
 
 ## 🔧 Troubleshooting
 
