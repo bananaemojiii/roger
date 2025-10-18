@@ -53,49 +53,78 @@ class CameraStream:
     def __init__(self):
         self.frame = None
         self.last_update = time.time()
-        
-    def get_frame_from_pi(self):
-        """Fetch frame from Raspberry Pi camera stream"""
-        try:
-            # Add multiple headers to bypass ngrok browser warning
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'ngrok-skip-browser-warning': '69420',  # Any value works
+        self.session = None
+        self.response = None
+        self.stream_iter = None
+        self.buffer = b''
+
+    def _ensure_connection(self):
+        """Open a persistent MJPEG connection if not already open."""
+        if self.session is None:
+            self.session = requests.Session()
+            self.session.headers.update({
+                'User-Agent': 'Mozilla/5.0',
                 'Accept': '*/*',
-                'Accept-Encoding': 'gzip, deflate',
                 'Connection': 'keep-alive'
-            }
-            
-            # Create session for connection reuse
-            session = requests.Session()
-            session.headers.update(headers)
-            
-            response = session.get(RASPBERRY_PI_URL, stream=True, timeout=15, allow_redirects=True)
-            
-            # Check if we got HTML (warning page) instead of stream
-            content_type = response.headers.get('Content-Type', '')
+            })
+        if self.response is not None:
+            return
+        # Establish stream
+        try:
+            self.response = self.session.get(
+                RASPBERRY_PI_URL,
+                stream=True,
+                timeout=10,
+                allow_redirects=True
+            )
+            content_type = self.response.headers.get('Content-Type', '')
             if 'html' in content_type.lower():
                 print(f"Warning: Got HTML response instead of stream. Content-Type: {content_type}")
-                return None
-            
-            bytes_data = b''
-            
-            for chunk in response.iter_content(chunk_size=1024):
-                bytes_data += chunk
-                a = bytes_data.find(b'\xff\xd8')  # JPEG start
-                b = bytes_data.find(b'\xff\xd9')  # JPEG end
-                
-                if a != -1 and b != -1:
-                    jpg = bytes_data[a:b+2]
-                    bytes_data = bytes_data[b+2:]
-                    
-                    # Decode JPEG
+                self._reset_connection()
+                return
+            self.stream_iter = self.response.iter_content(chunk_size=2048)
+        except Exception as e:
+            print(f"Failed to open MJPEG stream: {e}")
+            self._reset_connection()
+
+    def _reset_connection(self):
+        try:
+            if self.response is not None:
+                self.response.close()
+        except Exception:
+            pass
+        self.response = None
+        self.stream_iter = None
+        self.buffer = b''
+
+    def get_frame_from_pi(self):
+        """Read next JPEG frame from the persistent MJPEG connection."""
+        self._ensure_connection()
+        if self.stream_iter is None:
+            return None
+        try:
+            # Read chunks until a full JPEG is found
+            for _ in range(64):  # avoid infinite loop per call
+                chunk = next(self.stream_iter)
+                if not chunk:
+                    break
+                self.buffer += chunk
+                a = self.buffer.find(b'\xff\xd8')  # JPEG start
+                b = self.buffer.find(b'\xff\xd9')  # JPEG end
+                if a != -1 and b != -1 and b > a:
+                    jpg = self.buffer[a:b+2]
+                    self.buffer = self.buffer[b+2:]
                     frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                     if frame is not None:
                         return frame
-                        
+            return None
+        except StopIteration:
+            # Stream ended, reconnect
+            self._reset_connection()
+            return None
         except Exception as e:
-            print(f"Error fetching frame: {e}")
+            print(f"Error reading MJPEG stream: {e}")
+            self._reset_connection()
             return None
     
     def process_frame_with_yolo(self, frame):
@@ -215,15 +244,13 @@ def health():
 def status():
     """Check if camera connection is working"""
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'ngrok-skip-browser-warning': 'true'
-        }
-        response = requests.get(RASPBERRY_PI_URL, timeout=5, headers=headers)
-        if response.status_code == 200:
+        # Do a lightweight GET with stream=True to avoid downloading the infinite MJPEG body
+        response = requests.get(RASPBERRY_PI_URL, stream=True, timeout=3)
+        code = response.status_code
+        response.close()
+        if code == 200:
             return {'status': 'connected', 'raspberry_pi_url': RASPBERRY_PI_URL}
-        else:
-            return {'status': 'error', 'message': f'HTTP {response.status_code}', 'raspberry_pi_url': RASPBERRY_PI_URL}
+        return {'status': 'error', 'message': f'HTTP {code}', 'raspberry_pi_url': RASPBERRY_PI_URL}
     except Exception as e:
         return {'status': 'disconnected', 'error': str(e), 'raspberry_pi_url': RASPBERRY_PI_URL}
 
