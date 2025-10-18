@@ -32,12 +32,27 @@ class CameraStream:
     def get_frame_from_pi(self):
         """Fetch frame from Raspberry Pi camera stream"""
         try:
-            # Add headers to bypass ngrok browser warning
+            # Add multiple headers to bypass ngrok browser warning
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'ngrok-skip-browser-warning': 'true'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'ngrok-skip-browser-warning': '69420',  # Any value works
+                'Accept': '*/*',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive'
             }
-            response = requests.get(RASPBERRY_PI_URL, stream=True, timeout=10, headers=headers, verify=True)
+            
+            # Create session for connection reuse
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            response = session.get(RASPBERRY_PI_URL, stream=True, timeout=15, allow_redirects=True)
+            
+            # Check if we got HTML (warning page) instead of stream
+            content_type = response.headers.get('Content-Type', '')
+            if 'html' in content_type.lower():
+                print(f"Warning: Got HTML response instead of stream. Content-Type: {content_type}")
+                return None
+            
             bytes_data = b''
             
             for chunk in response.iter_content(chunk_size=1024):
