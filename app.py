@@ -19,21 +19,35 @@ app = Flask(__name__)
 RASPBERRY_PI_URL = os.environ.get('RASPBERRY_PI_URL', 'http://192.168.4.102:8000/stream.mjpg')
 PORT = int(os.environ.get('PORT', 8080))
 
-# Initialize YOLO model from Hugging Face
-print("Loading YOLO model from Hugging Face...")
-from huggingface_hub import hf_hub_download
-
-# Download model from your Hugging Face repository
+# Initialize YOLO model
+print("Loading YOLO model...")
+# Try to load from Hugging Face first, fallback to local file
+model_path = None
 HF_REPO = os.environ.get('HUGGINGFACE_REPO', 'bananafactories/yolov8-camera-model')
 HF_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', None)
 
-model_path = hf_hub_download(
-    repo_id=HF_REPO,
-    filename="yolov8n.pt",
-    token=HF_TOKEN
-)
+# Check if local model exists
+local_model_path = os.path.join(os.path.dirname(__file__), 'yolov8n.pt')
+if os.path.exists(local_model_path):
+    print(f"Using local YOLO model: {local_model_path}")
+    model_path = local_model_path
+else:
+    # Try downloading from Hugging Face
+    try:
+        from huggingface_hub import hf_hub_download
+        print(f"Downloading YOLO model from Hugging Face: {HF_REPO}...")
+        model_path = hf_hub_download(
+            repo_id=HF_REPO,
+            filename="yolov8n.pt",
+            token=HF_TOKEN
+        )
+        print(f"YOLO model loaded from: {HF_REPO}!")
+    except Exception as e:
+        print(f"Failed to download from Hugging Face: {e}")
+        raise
+
 model = YOLO(model_path)
-print(f"YOLO model loaded from: {HF_REPO}!")
+print(f"YOLO model loaded successfully!")
 
 class CameraStream:
     def __init__(self):
