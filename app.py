@@ -32,7 +32,12 @@ class CameraStream:
     def get_frame_from_pi(self):
         """Fetch frame from Raspberry Pi camera stream"""
         try:
-            response = requests.get(RASPBERRY_PI_URL, stream=True, timeout=5)
+            # Add headers to bypass ngrok browser warning
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'ngrok-skip-browser-warning': 'true'
+            }
+            response = requests.get(RASPBERRY_PI_URL, stream=True, timeout=10, headers=headers, verify=True)
             bytes_data = b''
             
             for chunk in response.iter_content(chunk_size=1024):
@@ -170,7 +175,11 @@ def health():
 def status():
     """Check if camera connection is working"""
     try:
-        response = requests.get(RASPBERRY_PI_URL, timeout=3)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'ngrok-skip-browser-warning': 'true'
+        }
+        response = requests.get(RASPBERRY_PI_URL, timeout=5, headers=headers)
         if response.status_code == 200:
             return {'status': 'connected', 'raspberry_pi_url': RASPBERRY_PI_URL}
         else:
