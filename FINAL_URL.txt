@@ -1,0 +1,18 @@
+✅ WORKING CLOUDFLARE URL:
+
+https://paths-replace-foods-recovery.trycloudflare.com/stream.mjpg
+
+🚀 UPDATE RAILWAY NOW:
+
+1. Go to: https://railway.app/project/YOUR_PROJECT
+2. Click "Variables" tab
+3. Update RASPBERRY_PI_URL to:
+   https://paths-replace-foods-recovery.trycloudflare.com/stream.mjpg
+4. Save (Railway auto-redeploys)
+5. Wait 2-3 minutes
+6. Refresh: roger-production-478d.up.railway.app
+
+✅ Stream tested and working!
+✅ Camera running
+✅ Cloudflare tunnel active
+
