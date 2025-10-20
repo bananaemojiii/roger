@@ -1,2 +1,4 @@
-HUGGINGFACE_REPO=bananafactories/yolov8-camera-model
-HUGGINGFACE_TOKEN=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
+# Hugging Face configuration
+# Set these as environment variables in Railway:
+# HUGGINGFACE_REPO=your-repo-name
+# HUGGINGFACE_TOKEN=your-token-here

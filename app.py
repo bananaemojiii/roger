@@ -23,7 +23,7 @@ PORT = int(os.environ.get('PORT', 8080))
 print("Loading YOLO model...")
 # Try to load from Hugging Face first, fallback to local file
 model_path = None
-HF_REPO = os.environ.get('HUGGINGFACE_REPO', 'bananafactories/yolov8-camera-model')
+HF_REPO = os.environ.get('HUGGINGFACE_REPO', '')
 HF_TOKEN = os.environ.get('HUGGINGFACE_TOKEN', None)
 
 # Check if local model exists
@@ -32,19 +32,24 @@ if os.path.exists(local_model_path):
     print(f"Using local YOLO model: {local_model_path}")
     model_path = local_model_path
 else:
-    # Try downloading from Hugging Face
-    try:
-        from huggingface_hub import hf_hub_download
-        print(f"Downloading YOLO model from Hugging Face: {HF_REPO}...")
-        model_path = hf_hub_download(
-            repo_id=HF_REPO,
-            filename="yolov8n.pt",
-            token=HF_TOKEN
-        )
-        print(f"YOLO model loaded from: {HF_REPO}!")
-    except Exception as e:
-        print(f"Failed to download from Hugging Face: {e}")
-        raise
+    # Try downloading from Hugging Face (requires environment variables)
+    if HF_REPO and HF_TOKEN:
+        try:
+            from huggingface_hub import hf_hub_download
+            print(f"Downloading YOLO model from Hugging Face: {HF_REPO}...")
+            model_path = hf_hub_download(
+                repo_id=HF_REPO,
+                filename="yolov8n.pt",
+                token=HF_TOKEN
+            )
+            print(f"YOLO model loaded from: {HF_REPO}!")
+        except Exception as e:
+            print(f"Failed to download from Hugging Face: {e}")
+            raise
+    else:
+        print("Error: No local model found and Hugging Face credentials not provided.")
+        print("Please set HUGGINGFACE_REPO and HUGGINGFACE_TOKEN environment variables.")
+        raise FileNotFoundError("YOLO model not found locally and HF credentials missing")
 
 model = YOLO(model_path)
 print(f"YOLO model loaded successfully!")

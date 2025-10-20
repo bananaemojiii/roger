@@ -34,9 +34,9 @@
 ```bash
 RASPBERRY_PI_URL=https://bundle-payday-nelson-dim.trycloudflare.com/stream.mjpg
 
-HUGGINGFACE_REPO=bananafactories/yolov8-camera-model
+HUGGINGFACE_REPO=your-username/your-repo-name
 
-HUGGINGFACE_TOKEN=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
+HUGGINGFACE_TOKEN=your-hf-token-here
 ```
 
 ### Then:

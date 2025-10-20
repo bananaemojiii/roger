@@ -17,8 +17,8 @@ Go to Railway Dashboard → Your Project → Variables tab and add:
 
 ```
 RASPBERRY_PI_URL=https://bundle-payday-nelson-dim.trycloudflare.com/stream.mjpg
-HUGGINGFACE_REPO=bananafactories/yolov8-camera-model
-HUGGINGFACE_TOKEN=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
+HUGGINGFACE_REPO=your-username/your-repo-name
+HUGGINGFACE_TOKEN=your-hf-token-here
 ```
 
 ## 🚀 Deploy to Railway:
@@ -80,8 +80,8 @@ api = HfApi()
 api.upload_file(
     path_or_fileobj="path/to/new_model.pt",
     path_in_repo="yolov8n.pt",
-    repo_id="bananafactories/yolov8-camera-model",
-    token="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",
+    repo_id="your-username/your-repo-name",
+    token="your-hf-token-here",
     commit_message="Update to custom trained model"
 )
 
